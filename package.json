@@ -1,0 +1,33 @@
+{
+    "name": "verse",
+    "version": "0.1.0",
+    "author": "Miquel Sabaté Solà",
+    "license": "LGPL-3.0-or-later",
+    "description": "Handy utilities for latin verse.",
+    "bugs": {
+        "url": "https://github.com/mssola/verse/issues"
+    },
+    "homepage": "https://github.com/mssola/verse",
+    "keywords": ["verse", "latin", "language", "literature", "poetry"],
+    "scripts": {
+        "bin": "ts-node ./bin/cli.ts",
+        "test": "jest"
+    },
+    "devDependencies": {
+        "@types/jest": "^27.4.1",
+        "jest": "^27.5.1",
+        "ts-jest": "^27.1.3",
+        "ts-node": "^10.7.0",
+        "typescript": "^4.6.2"
+    },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "transform": {
+            "node_modules/variables/.+\\.(j|t)sx?$": "ts-jest"
+        },
+        "transformIgnorePatterns": [
+            "node_modules/(?!variables/.*)"
+        ]
+    }
+}
