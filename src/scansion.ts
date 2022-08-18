@@ -16,24 +16,32 @@
 
 import { isVowel, syllabify, Syllable, WordPosition, Flag } from './syllable';
 
+// MeterKind contains the description for a given verse or poem based on the
+// meter.
+export enum MeterKind {
+    Unknown,
+    DactylicHexameter,
+    DactylicPentameter,
+};
+
 // Poem contains a set of verses and the description of the metric being used.
 export interface Poem {
     verses: Array<Verse>,
-    kind: string
+    kind: MeterKind
 };
 
 // Verse contains an array of VerseSyllables containing the parsed verse, plus
 // the description of the metric being used and the original line.
 export interface Verse {
     syllables: Array<VerseSyllable>,
-    kind: string,
+    kind: MeterKind,
     line: string
 };
 
 // Quantity of the verse syllable.
 export enum Quantity {
-    short = "short",
-    long  = "long"
+    short,
+    long
 };
 
 // VerseSyllable is similar to Syllable, but it contains the quantity of the
@@ -67,6 +75,7 @@ function isAlpha(c: string): boolean {
     switch (c.toLowerCase()) {
         case 'ā': case 'ē': case 'ī': case 'ō': case 'ū': case 'ȳ':
         case 'ă': case 'ĕ': case 'ĭ': case 'ŏ': case 'ŭ': case 'ў':
+        case 'ä': case 'ë': case 'ï': case 'ö': case 'ü': case 'ÿ':
             return true;
         default:
             return false;
@@ -157,16 +166,30 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
 
 // Returns true of the given syllable results in a long vowel. That is, it
 // either contains an explicit long vowel or a diphthong.
-function longVowel(str: string) {
+function longVowel(syllable: Syllable) {
     let sum = 0;
+    let str = syllable.value;
 
     for (let i = 0; i < str.length; i++) {
         switch (str.charAt(i).toLowerCase()) {
-            case 'a': case 'e': case 'i':
+            case 'i':
+                // If this 'i' is at the very beginning of the syllable and we
+                // know that this syllable starts with a "sneaky semivowel",
+                // then we can skip this as a consonant. Otherwise fall through.
+                if (i == 0 && (syllable.flags & Flag.StartsWithSneakySemivowel) == Flag.StartsWithSneakySemivowel) {
+                    break;
+                }
+            case 'a': case 'e':
             case 'o': case 'y':
                 sum += 1;
                 break;
             case 'u':
+                // Same as for the 'i' case: if this 'u' is clearly a "sneaky
+                // semivowel", just skip it.
+                if (i == 0 && (syllable.flags & Flag.StartsWithSneakySemivowel) == Flag.StartsWithSneakySemivowel) {
+                    break;
+                }
+
                 let prev = str.charAt(i - 1).toLowerCase();
                 if ((prev == "q" || prev == "g") && isVowel(str, i + 1)) {
                     break
@@ -177,25 +200,65 @@ function longVowel(str: string) {
             case 'ō': case 'ū': case 'ȳ':
                 sum += 2;
                 break
+            case '_':
+                // Special character which simply means that an ellision is at
+                // place. In this case, just reset the `sum` variable and assume
+                // the quantity from whatever comes next.
+                sum = 0;
+                break
         }
     }
     return sum > 1;
 }
 
-// Given some rythmic statistics, return a string describing the verse at hand.
-function figureOutRythm(stats: RythmStats): string {
-    if ((stats.nlongs + stats.nshorts) >= 13) {
-        // TODO
-        return "Dactylic hexameter";
+// Returns true if the quantity pattern matches a given string representing the
+// pattern.
+function meterEndsWith(pattern: Array<Quantity>, given: string): boolean {
+    if (given.length > pattern.length) {
+        return false;
     }
 
-    return "unknown";
+    let ary = pattern.slice(pattern.length - given.length, pattern.length);
+    for (let i = 0; i < given.length; i++) {
+        let c = given.charAt(i);
+        if (c === '-') {
+            if (ary[i] !== Quantity.long) {
+                return false;
+            }
+        } else if (c === 'u') {
+            if (ary[i] !== Quantity.short) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Given some rythmic statistics, return a string describing the verse at hand.
+function figureOutRythm(stats: RythmStats): MeterKind {
+    // NOTE: the algorithm is still too strict/naive.
+
+    let sum = stats.nlongs + stats.nshorts;
+
+    if (sum >= 12 && sum <= 14) {
+        if (meterEndsWith(stats.pattern, "--uu-uu-")) {
+            return MeterKind.DactylicPentameter;
+        }
+    }
+    if (sum >= 13) {
+        if (meterEndsWith(stats.pattern, "-uu-x")) {
+            return MeterKind.DactylicHexameter;
+        }
+        return MeterKind.Unknown;
+    }
+
+    return MeterKind.Unknown;
 }
 
 // Given an array of syllables, return a `Verse` object with the rythm already
 // annotated.
 function markRythm(syllables: Array<Syllable>): Verse {
-    let res: Verse = { syllables: [], kind: "", line: "" };
+    let res: Verse = { syllables: [], kind: MeterKind.Unknown, line: "" };
     let stats: RythmStats = { nshorts: 0, nlongs: 0, pattern: [] }
 
     for (let syllable of syllables) {
@@ -204,7 +267,7 @@ function markRythm(syllables: Array<Syllable>): Verse {
         if (!isVowel(syllable.value, syllable.value.length - 1)) {
             quantity = Quantity.long;
             stats.nlongs += 1;
-        } else if (longVowel(syllable.value)) {
+        } else if (longVowel(syllable)) {
             quantity = Quantity.long;
             stats.nlongs += 1;
         } else {
@@ -226,12 +289,13 @@ function markRythm(syllables: Array<Syllable>): Verse {
 }
 
 // Given an array of verses, it analyzes them so to return a proper `Poem`
-// object.
-function analyze(verses: Array<Verse>): Poem {
-    // TODO
-    let kind = "unknown";
-    if (verses.length > 0) {
-        kind = verses[0].kind;
+// object. This method also requires the`foundRythms` argument, which is an
+// array of the different verse kinds that have been found for this poem.
+function analyze(verses: Array<Verse>, foundRythms: Array<MeterKind>): Poem {
+    let kind = MeterKind.Unknown;
+
+    if (foundRythms.length === 1) {
+        kind = foundRythms[0];
     }
 
     return { verses: verses, kind: kind };
@@ -248,6 +312,7 @@ export function scan(text: string): Poem {
     // '\n' or special sequences such as "//".
     let lines = text.split(/[\n\/\/]+/)
     let res: Array<Verse> = [];
+    let foundRythms: Array<MeterKind> = [];
 
     for (let line of lines) {
         if (line.replace(/\s+/g, '') === '') {
@@ -260,7 +325,11 @@ export function scan(text: string): Poem {
         let rythm = markRythm(syllables);
         rythm.line = line;
         res.push(rythm);
+
+        if (!foundRythms.includes(rythm.kind)) {
+            foundRythms.push(rythm.kind);
+        }
     }
 
-    return analyze(res);
+    return analyze(res, foundRythms);
 }

@@ -5,14 +5,14 @@
 
 ---
 
-`verse` is a small library that is meant to allow developers to syllabify Latin
-phrases, while also be able to scan poems in Latin. This done mainly through the
-`syllable.syllabify` and the `scansion.scan` functions.
+`verse` is a small library that allows you to syllabify and scan phrases and
+poems in latin. This is done mainly through the `syllable.syllabify` and the
+`scansion.scan` functions (check the documentation on these functions in order
+to understand how to use them).
 
-Check the documentation on these functions in order to understand how to use
-them. Otherwise, you can check the `./bin/cli.ts` file for some usage. You can
-actually run this script with `yarn run bin` which, coupled with one of the
-examples from the `examples` directory, will give you an output such as this:
+You can check the `./bin/cli.ts` file for some usage. You can actually run this
+script with `yarn run bin` which, coupled with one of the examples from the
+`examples` directory, will give you an output such as this:
 
 ``` txt
 Verse: Dactylic hexameter
@@ -44,7 +44,7 @@ Notice some things from the above example:
 1. Macrons are being used: this is because, even though it can scan latin verse,
    this library does *not* understand the full complexity of latin. That is, you
    need to let the functions know which vowels are short/long because it will
-   not be able to know this on its own (except stuff like diphthongs, of
+   not be able to know this on its own (except for stuff like diphthongs, of
    course).
 2. Semivowels that are written with `u` or `i` are recognized, but you really
    need to write them with `v` or `j` whenever there might be a case which needs

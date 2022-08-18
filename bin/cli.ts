@@ -1,12 +1,23 @@
-import { scan, Poem, Quantity } from '../src/scansion';
+import { scan, Poem, MeterKind, Quantity } from '../src/scansion';
 import "process";
 
 let res: Poem;
 
+// Returns a string representing the given meter kind.
+function meterKind(kind: MeterKind): string {
+    switch (kind) {
+        case MeterKind.DactylicHexameter:
+            return "Dactylic hexameter";
+        case MeterKind.Unknown:
+        default:
+            return "unknown";
+    }
+}
+
 process.stdin.on('data', (data) => {
     res = scan(data.toString());
 
-    console.log(`Verse: ${res.kind}\n`);
+    console.log(`Verse: ${meterKind(res.kind)}\n`);
 
     res.verses.forEach((v) => {
         let line = v.line;
