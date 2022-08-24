@@ -6,7 +6,7 @@ import { syllabify, WordPosition } from '../src/syllable';
 interface Table {
   value: string,
   expected: Array<string>,
-};
+}
 
 // Returns the given string without tremas.
 function stripTrema(c: string): string {
@@ -90,14 +90,14 @@ const words: Array<Table> = [
 // the first failure).
 words.forEach((word) => {
   test(`properly syllabifies '${word.value}'`, () => {
-    let res = syllabify(word.value);
+    const res = syllabify(word.value);
 
     for (let i = 0; i < word.expected.length; i++) {
       // Test that the value is actually what we expect
       expect(res[i].value).toStrictEqual(word.expected[i]);
 
       // Test that the begin/end couple match the value.
-      let val = stripTrema(word.value);
+      const val = stripTrema(word.value);
       expect(val.substring(res[i].begin, res[i].end)).toStrictEqual(word.expected[i]);
 
       // Make sure that the position is set accordingly.

@@ -1,8 +1,8 @@
 import { Quantity, scan } from '../src/scansion';
 
 test("don't assume always long quantity on ellisions", () => {
-  let syllables = scan("nūdāsse alicui").verses[0].syllables;
-  let ary = [Quantity.long, Quantity.long, Quantity.short, Quantity.short, Quantity.long];
+  const syllables = scan("nūdāsse alicui").verses[0].syllables;
+  const ary = [Quantity.long, Quantity.long, Quantity.short, Quantity.short, Quantity.long];
 
   expect(syllables.length).toStrictEqual(ary.length);
 
@@ -12,11 +12,11 @@ test("don't assume always long quantity on ellisions", () => {
 });
 
 test("don't consider sneaky semivowel as long syllable always", () => {
-  let tests = ['iuvat', 'ualet'];
-  let ary = [Quantity.short, Quantity.long];
+  const tests = ['iuvat', 'ualet'];
+  const ary = [Quantity.short, Quantity.long];
 
-  for (let t of tests) {
-    let syllables = scan(t).verses[0].syllables;
+  for (const t of tests) {
+    const syllables = scan(t).verses[0].syllables;
 
     expect(syllables.length).toStrictEqual(ary.length);
 

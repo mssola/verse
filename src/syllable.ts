@@ -33,7 +33,7 @@ export enum WordPosition {
     // It's the result of merging two syllables together (e.g. ellision on word
     // contact).
     Merged = 1 << 4,
-};
+}
 
 // Flags that might be assigned to a syllable for special quirks.
 export enum Flag {
@@ -43,7 +43,7 @@ export enum Flag {
     // Even though the syllable appears to start with a vowel, it's in fact a
     // semivowel and it should be treated as such.
     StartsWithSneakySemivowel = 1 << 1,
-};
+}
 
 // Syllable contains a value which is the string that represents the syllable,
 // and a number range of indices pointing at the beginning and the end of the
@@ -55,14 +55,13 @@ export interface Syllable {
     end: number,
     position: WordPosition,
     flags: Flag
-};
+}
 
-// TODO: in some places we already know the character. I bet we can overload this function!
-//
-// Returns true if the given word contains a vowel at the given index, false
-// otherwise.
-export function isVowel(word: string, index: number, acceptSemivowel = false): boolean {
-    switch (word.charAt(index).toLowerCase()) {
+// Returns true if the given character contains a vowel, false otherwise. You
+// can optionally pass the `acceptSemivowel` parameter, which instructs this
+// function to also accept semivowels (i.e. 'j' or 'v') as vowels as well.
+export function charIsVowel(character: string, acceptSemivowel = false): boolean {
+    switch (character.toLowerCase()) {
         case 'a': case 'ā': case 'ă': case 'ä':
         case 'e': case 'ē': case 'ĕ': case 'ë':
         case 'i': case 'ī': case 'ĭ': case 'ï':
@@ -77,13 +76,22 @@ export function isVowel(word: string, index: number, acceptSemivowel = false): b
     }
 }
 
+// Returns true if the given word contains a vowel at the given index, false
+// otherwise. You can optionally pass the `acceptSemivowel` parameter, which
+// instructs this function to also accept semivowels (i.e. 'j' or 'v') as vowels
+// as well.
+export function isVowel(word: string, index: number, acceptSemivowel = false): boolean {
+    return charIsVowel(word.charAt(index), acceptSemivowel);
+}
+
 // Returns true if the given word contains a vowel belonging to a diphthong that
 // was previously opened by another one (e.g. for 'aestās', this function will
 // only return true if the index is 1). This function will also consider the
 // special case of "qu-" and "gu" clusters, where the index is pointing to a
 // vowel after "qu" and "gu".
 function isDiphthong(word: string, index: number): boolean {
-    let c = word.charAt(index).toLowerCase();
+    const c = word.charAt(index).toLowerCase();
+    let bf: string;
 
     switch (word.charAt(index - 1).toLowerCase()) {
         case 'a': case 'ă':
@@ -103,9 +111,9 @@ function isDiphthong(word: string, index: number): boolean {
             // If the previous one was a 'u', take into account that it might be
             // a "qu-" or "gu-" cluster. Thus, we will account them as a
             // diphthong.
-            let bf = word.charAt(index - 2).toLowerCase();
+            bf = word.charAt(index - 2).toLowerCase();
             if (bf === 'q' || bf == 'g') {
-                return isVowel(word, index);
+                return charIsVowel(c);
             }
 
             // NOTE: the "ui" diphthong is actually really rare (only found in
@@ -132,12 +140,12 @@ function vowelAhead(word: string, index: number): boolean {
 // Returns true if the current index is pointing to a consonant that has to go
 // into the next syllable.
 function consonantNextSyllable(word: string, index: number): boolean {
-    if (isVowel(word, index, true)) {
+    const c = word.charAt(index).toLowerCase();
+    if (charIsVowel(c, true)) {
         return false;
     }
 
-    let c = word.charAt(index).toLowerCase();
-    let next = word.charAt(index + 1).toLowerCase();
+    const next = word.charAt(index + 1).toLowerCase();
 
     // In some marginal cases, the "qu-"/"gu-" clusters are not detected in
     // advanced (e.g. "qvoqve"). We can handle this now.
@@ -145,17 +153,15 @@ function consonantNextSyllable(word: string, index: number): boolean {
         return true;
     }
 
-    // TODO: make isVowel accept also `nextNext` instead of doing this stupid test.
-    //
     // Look ahead: if the next one is a vowel and next to it there is the coda,
     // then the current consonant is most surely an opening consonant and not
     // the closing one of the previous. This case is usually handled in the
     // general algorithm, but it has escaped from words such as "VIRVMQVE".
-    let nextNext = word.charAt(index + 2);
+    const nextNext = word.charAt(index + 2);
     if (nextNext === '') {
         return false;
     }
-    if (isVowel(word, index + 1, true) && !isVowel(word, index + 2, true)) {
+    if (charIsVowel(next, true) && !charIsVowel(nextNext, true)) {
         return true;
     }
     return false;
@@ -163,14 +169,14 @@ function consonantNextSyllable(word: string, index: number): boolean {
 
 // Returns true if the given consonant is followed by a liquid consonant (i.e.
 // 'l' or 'r'), forming a valid atomic cluster.
-function liquidConsonant(word: string, index: number): boolean {
-    let next = word.charAt(index + 1).toLowerCase();
+function liquidConsonant(cur: string, next: string): boolean {
+    next = next.toLowerCase();
 
     if (next === '' || (next !== 'l' && next !== 'r')) {
         return false;
     }
 
-    switch (word.charAt(index).toLowerCase()) {
+    switch (cur) {
         case 'b': case 'c': case 'd':
         case 'f': case 'g': case 'k':
         case 'p': case 't': case 'z':
@@ -181,10 +187,10 @@ function liquidConsonant(word: string, index: number): boolean {
 }
 
 // Returns true if this is a 'th-' cluster.
-function isTh(word: string, index: number): boolean {
-    let next = word.charAt(index + 1).toLowerCase();
+function isTh(cur: string, next: string): boolean {
+    next = next.toLowerCase();
 
-    return word.charAt(index).toLowerCase() === 't' && next === 'h';
+    return cur.toLowerCase() === 't' && next === 'h';
 }
 
 // Returns true if this is a "special nj-" consonant cluster. This is best
@@ -198,7 +204,7 @@ function specialNjCluster(word: string, index: number): boolean {
         return false;
     }
 
-    let next = word.charAt(index + 1).toLowerCase();
+    const next = word.charAt(index + 1).toLowerCase();
     if (next !== 'i' && next !== 'ĭ' && next !== 'j') {
         return false;
     }
@@ -210,7 +216,7 @@ function specialNjCluster(word: string, index: number): boolean {
 // starting with a semivowel that was written with "i" or "u" instead of "j" or
 // "v". In order to determine this, it's also needed to pass `current`, which
 // contains the current parsed syllable.
-function sneakySemivowel(word: string, current: string, index: number): boolean {
+function sneakySemivowel(char: string, current: string): boolean {
     current = current.toLowerCase();
 
     // In order for this to be a semivowel, the current syllable must start with
@@ -219,7 +225,7 @@ function sneakySemivowel(word: string, current: string, index: number): boolean 
     if (current !== 'i' && current !== 'u') {
         return false;
     }
-    return isVowel(word, index);
+    return charIsVowel(char);
 }
 
 // Returns true of the syllable at point is supposed to have a long coda (i.e.
@@ -230,7 +236,7 @@ function longCoda(word: string, index: number): boolean {
     // very specific case. This will be generalized whenever I face new
     // clusters.
 
-    let current = word.charAt(index).toLowerCase();
+    const current = word.charAt(index).toLowerCase();
     if (current !== 'b' && current !== 'n') {
         return false;
     }
@@ -244,9 +250,9 @@ function longCoda(word: string, index: number): boolean {
 function prefixIndex(word: string): number {
     // NOTE: for now this is the only prefix that has to be explicitely handled.
     // The others are rightly handled from the general code.
-    let prefixes = ['in'];
+    const prefixes = ['in'];
 
-    for (let prefix of prefixes) {
+    for (const prefix of prefixes) {
         if (word.toLowerCase().startsWith(prefix)) {
             return prefix.length;
         }
@@ -290,7 +296,7 @@ function mergeEnd(remaining: string, ary: Array<Syllable>): boolean {
         return false;
     }
 
-    let last = ary[ary.length - 1].value.toLowerCase();
+    const last = ary[ary.length - 1].value.toLowerCase();
     remaining  = remaining.toLowerCase();
 
     return (remaining === 'i' && last === 'cu') ||
@@ -305,8 +311,8 @@ function mergeHead(ary: Array<Syllable>): Array<Syllable> {
         return ary;
     }
 
-    let first = ary[0].value.toLowerCase();
-    let second = ary[1].value.toLowerCase();
+    const first = ary[0].value.toLowerCase();
+    const second = ary[1].value.toLowerCase();
 
     if (first === 'cu' && second === 'i') {
         ary[1].value = ary[0].value + ary[1].value;
@@ -328,7 +334,7 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
     // Some latin prefixes cannot be splitted and they count as an atomic
     // syllable. Take this into account now, so the main loop doesn't have to
     // care about this.
-    let index = prefixIndex(word);
+    const index = prefixIndex(word);
     if (index > 0) {
         res.push({
             value: word.substring(0, index),
@@ -347,8 +353,8 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
         // just swallow everything until we find one. Once that happens, then
         // the parsing fun begins.
         if (vowel) {
-            if (isVowel(word, i)) {
-                let sneaky = sneakySemivowel(word, syllable, i);
+            if (charIsVowel(c)) {
+                const sneaky = sneakySemivowel(c, syllable);
                 if (sneaky) {
                     flag = Flag.StartsWithSneakySemivowel;
                 }
@@ -376,35 +382,19 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
                 }
             } else {
                 vowel = false;
+                const next = word.charAt(i + 1);
 
-                // TODO: notice that some if statements have the same body,
-                // maybe put a fat conditional?
-                //
                 // When a vowel was seen and now we have a consonant, the
                 // tendency would be to just call for another syllable, but we
-                // have to be extra careful.
-                if (isVowel(word, i + 1) || consonantNextSyllable(word, i) || specialNjCluster(word, i)) {
-                    // If the next character is actually a vowel, then we really
-                    // know that a new syllable is ahead.
-                    //
-                    // Note that here we allowed explicit semivowels (i.e.
-                    // 'j' and 'v') to be considered as vowels. This is to help
-                    // with explicit markings in poetry such as `Lā|vī|nja|que`.
-                    res.push({
-                        value: syllable,
-                        begin: begin + offset,
-                        end: i + offset,
-                        position: WordPosition.None,
-                        flags: flag,
-                    });
-                    begin = i;
-                    syllable = '';
-                    flag = Flag.None;
-                } else if (liquidConsonant(word, i) || isTh(word, i)) {
-                    // If this is part of a liquid cluster (e.g. "cr") or is a
-                    // syllable starting with a 'th-' cluster, then we have to
-                    // discard the current character, since it will belong to
-                    // the next syllable altogether.
+                // have to be extra careful for the following syllable-starting cases:
+                //   1. The next character is actually a pure vowel, so we can
+                //      be sure that this consonant belongs to the next syllable.
+                //   2. We can determine that this consonant belongs to a
+                //      special cluster of weird-starting syllables.
+                //   3. A "nj<vowel>" such as "nia" in "Laviniaque".
+                //   4. A cluster with a liquid consonant.
+                //   5. A "th-" cluster.
+                if (charIsVowel(next) || consonantNextSyllable(word, i) || specialNjCluster(word, i) || liquidConsonant(c, next) || isTh(c, next)) {
                     res.push({
                         value: syllable,
                         begin: begin + offset,

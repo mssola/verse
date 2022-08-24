@@ -26,8 +26,8 @@ process.stdin.on('data', (data) => {
         let prevend = 0;
 
         for (let i = 0; i < v.syllables.length; i++) {
-            let char = "|";
-            let s = v.syllables[i];
+            const char = "|";
+            const s = v.syllables[i];
 
             if (i < v.syllables.length - 1) {
                 line = line.substring(0, s.end + offset) + char + line.substring(s.end + offset);

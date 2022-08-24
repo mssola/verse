@@ -22,13 +22,13 @@ export enum MeterKind {
     Unknown,
     DactylicHexameter,
     DactylicPentameter,
-};
+}
 
 // Poem contains a set of verses and the description of the metric being used.
 export interface Poem {
     verses: Array<Verse>,
     kind: MeterKind
-};
+}
 
 // Verse contains an array of VerseSyllables containing the parsed verse, plus
 // the description of the metric being used and the original line.
@@ -36,13 +36,13 @@ export interface Verse {
     syllables: Array<VerseSyllable>,
     kind: MeterKind,
     line: string
-};
+}
 
 // Quantity of the verse syllable.
 export enum Quantity {
     short,
     long
-};
+}
 
 // VerseSyllable is similar to Syllable, but it contains the quantity of the
 // syllable and the semantics of this type already assumes that its value will
@@ -53,14 +53,14 @@ export interface VerseSyllable {
     begin: number,
     end: number,
     quantity: Quantity,
-};
+}
 
 // Statistics on rythm for a given verse.
 interface RythmStats {
     nlongs: number,
     nshorts: number,
     pattern: Array<Quantity>
-};
+}
 
 // Returns true if the given string is made up of a single UTF-8 valid
 // alphabetical character.
@@ -91,7 +91,7 @@ function bareSyllables(line: string): Array<Syllable> {
     let inWord = false;
 
     for (let i = 0; i < line.length; i++) {
-        let c = line.charAt(i);
+        const c = line.charAt(i);
 
         if (isAlpha(c)) {
             if (!inWord) {
@@ -116,7 +116,7 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
     let prev = syllables[0];
 
     for (let i = 1; i < syllables.length; i++) {
-        let cur = syllables[i];
+        const cur = syllables[i];
 
         // All the "magic" happens with the contact of of words. That is, we
         // only need to check for syllables in an end position followed by
@@ -140,7 +140,7 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
                 !isVowel(prev.value, prev.value.length - 1)) {
                 // Split of part of a syllable that ends with a consonant in
                 // contact with a vowel.
-                let c = prev.value[prev.value.length - 1];
+                const c = prev.value[prev.value.length - 1];
                 syllables[i - 1].value = syllables[i - 1].value.substring(0, syllables[i - 1].value.length - 1)
                 syllables[i].value = `${c}${syllables[i].value}`;
                 syllables[i].begin = syllables[i - 1].end - 1;
@@ -168,7 +168,8 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
 // either contains an explicit long vowel or a diphthong.
 function longVowel(syllable: Syllable) {
     let sum = 0;
-    let str = syllable.value;
+    let prev: string;
+    const str = syllable.value;
 
     for (let i = 0; i < str.length; i++) {
         switch (str.charAt(i).toLowerCase()) {
@@ -179,6 +180,7 @@ function longVowel(syllable: Syllable) {
                 if (i == 0 && (syllable.flags & Flag.StartsWithSneakySemivowel) == Flag.StartsWithSneakySemivowel) {
                     break;
                 }
+            // eslint-disable-next-line no-fallthrough
             case 'a': case 'e':
             case 'o': case 'y':
                 sum += 1;
@@ -190,7 +192,7 @@ function longVowel(syllable: Syllable) {
                     break;
                 }
 
-                let prev = str.charAt(i - 1).toLowerCase();
+                prev = str.charAt(i - 1).toLowerCase();
                 if ((prev == "q" || prev == "g") && isVowel(str, i + 1)) {
                     break
                 }
@@ -218,9 +220,9 @@ function meterEndsWith(pattern: Array<Quantity>, given: string): boolean {
         return false;
     }
 
-    let ary = pattern.slice(pattern.length - given.length, pattern.length);
+    const ary = pattern.slice(pattern.length - given.length, pattern.length);
     for (let i = 0; i < given.length; i++) {
-        let c = given.charAt(i);
+        const c = given.charAt(i);
         if (c === '-') {
             if (ary[i] !== Quantity.long) {
                 return false;
@@ -238,7 +240,7 @@ function meterEndsWith(pattern: Array<Quantity>, given: string): boolean {
 function figureOutRythm(stats: RythmStats): MeterKind {
     // NOTE: the algorithm is still too strict/naive.
 
-    let sum = stats.nlongs + stats.nshorts;
+    const sum = stats.nlongs + stats.nshorts;
 
     if (sum >= 12 && sum <= 14) {
         if (meterEndsWith(stats.pattern, "--uu-uu-")) {
@@ -258,10 +260,10 @@ function figureOutRythm(stats: RythmStats): MeterKind {
 // Given an array of syllables, return a `Verse` object with the rythm already
 // annotated.
 function markRythm(syllables: Array<Syllable>): Verse {
-    let res: Verse = { syllables: [], kind: MeterKind.Unknown, line: "" };
-    let stats: RythmStats = { nshorts: 0, nlongs: 0, pattern: [] }
+    const res: Verse = { syllables: [], kind: MeterKind.Unknown, line: "" };
+    const stats: RythmStats = { nshorts: 0, nlongs: 0, pattern: [] }
 
-    for (let syllable of syllables) {
+    for (const syllable of syllables) {
         let quantity: Quantity;
 
         if (!isVowel(syllable.value, syllable.value.length - 1)) {
@@ -310,11 +312,11 @@ function analyze(verses: Array<Verse>, foundRythms: Array<MeterKind>): Poem {
 export function scan(text: string): Poem {
     // First of all, split the given text by lines. A line separator might be
     // '\n' or special sequences such as "//".
-    let lines = text.split(/[\n\/\/]+/)
-    let res: Array<Verse> = [];
-    let foundRythms: Array<MeterKind> = [];
+    const lines = text.split(/[\n//]+/)
+    const res: Array<Verse> = [];
+    const foundRythms: Array<MeterKind> = [];
 
-    for (let line of lines) {
+    for (const line of lines) {
         if (line.replace(/\s+/g, '') === '') {
             continue;
         }
@@ -322,7 +324,7 @@ export function scan(text: string): Poem {
         let syllables = bareSyllables(line);
         syllables = resyllabify(syllables);
 
-        let rythm = markRythm(syllables);
+        const rythm = markRythm(syllables);
         rythm.line = line;
         res.push(rythm);
 
