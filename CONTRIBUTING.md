@@ -20,7 +20,19 @@ any of the examples from `examples` directory and check whether everything is
 running as it should. For example:
 
 ```sh
-$ cat examples/armavirumque.txt | yarn run bin
+$ cat examples/aeneis-i.txt | yarn run bin
+```
+
+This script is not just used for checking out examples, but it's also used for
+end-to-end testing. That is, we rely on
+[BATS](https://github.com/bats-core/bats-core), which for
+[tests/scan.bats](./tests/scan.bats) it simply calls this script and compares
+with expectations on [tests/testdata](./tests/testdata). In order to run these
+tests, just install [BATS](https://github.com/bats-core/bats-core) and run it
+like so:
+
+```sh
+$ bats --verbose-run tests/scan.bats
 ```
 
 ## Issue reporting

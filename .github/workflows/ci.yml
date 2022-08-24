@@ -42,3 +42,25 @@ jobs:
       run: |
         yarn
         yarn test
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup BATS
+      uses: mig4/setup-bats@v1
+      with:
+        bats-version: 1.7.0
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14
+
+    - name: Run
+      run: |
+        yarn
+        bats --verbose-run tests/scan.bats

@@ -22,6 +22,7 @@ export enum MeterKind {
     Unknown,
     DactylicHexameter,
     DactylicPentameter,
+    ElegiacCouplet,
 }
 
 // Poem contains a set of verses and the description of the metric being used.
@@ -290,6 +291,26 @@ function markRythm(syllables: Array<Syllable>): Verse {
     return res;
 }
 
+// Returns true if the given poems seems to be an elegiac couplet. The arguments
+// are the same as for the `analyze` method.
+function isElegiacCouplet(verses: Array<Verse>, foundRythms: Array<MeterKind>): boolean {
+    if (verses.length % 2 !== 0) {
+        return false;
+    }
+    if (!foundRythms.includes(MeterKind.DactylicHexameter) ||
+        !foundRythms.includes(MeterKind.DactylicPentameter)) {
+        return false;
+    }
+
+    for (let i = 0; i < verses.length - 2; i += 2) {
+        if (verses[i].kind !== MeterKind.DactylicHexameter ||
+            verses[i + 1].kind !== MeterKind.DactylicPentameter) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Given an array of verses, it analyzes them so to return a proper `Poem`
 // object. This method also requires the`foundRythms` argument, which is an
 // array of the different verse kinds that have been found for this poem.
@@ -298,9 +319,26 @@ function analyze(verses: Array<Verse>, foundRythms: Array<MeterKind>): Poem {
 
     if (foundRythms.length === 1) {
         kind = foundRythms[0];
+    } else if (foundRythms.length === 2) {
+        if (isElegiacCouplet(verses, foundRythms)) {
+            kind = MeterKind.ElegiacCouplet;
+        }
     }
 
     return { verses: verses, kind: kind };
+}
+
+// Returns the given line without unwanted characters such as tremas.
+function trimmedLine(line: string): string {
+    // NOTE: doing this is quite naive, but I have found it not to be too
+    // expensive. Whenever that is the case, we should rething how this is
+    // handled.
+    return line
+        .replace(/ä/gi, 'a')
+        .replace(/ë/gi, 'e')
+        .replace(/ï/gi, 'i')
+        .replace(/ö/gi, 'o')
+        .replace(/ü/gi, 'u');
 }
 
 // Given a blob of text, return a full Poem structure that contains the
@@ -325,7 +363,7 @@ export function scan(text: string): Poem {
         syllables = resyllabify(syllables);
 
         const rythm = markRythm(syllables);
-        rythm.line = line;
+        rythm.line = trimmedLine(line);
         res.push(rythm);
 
         if (!foundRythms.includes(rythm.kind)) {

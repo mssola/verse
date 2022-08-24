@@ -188,9 +188,7 @@ function liquidConsonant(cur: string, next: string): boolean {
 
 // Returns true if this is a 'th-' cluster.
 function isTh(cur: string, next: string): boolean {
-    next = next.toLowerCase();
-
-    return cur.toLowerCase() === 't' && next === 'h';
+    return cur.toLowerCase() === 't' && next.toLowerCase() === 'h';
 }
 
 // Returns true if this is a "special nj-" consonant cluster. This is best

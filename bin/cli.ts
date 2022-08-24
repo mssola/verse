@@ -8,6 +8,8 @@ function meterKind(kind: MeterKind): string {
     switch (kind) {
         case MeterKind.DactylicHexameter:
             return "Dactylic hexameter";
+        case MeterKind.ElegiacCouplet:
+            return "Elegiac couplet"
         case MeterKind.Unknown:
         default:
             return "unknown";
@@ -19,7 +21,7 @@ process.stdin.on('data', (data) => {
 
     console.log(`Verse: ${meterKind(res.kind)}\n`);
 
-    res.verses.forEach((v) => {
+    res.verses.forEach((v, index, ary) => {
         let line = v.line;
         let rythm = "";
         let offset = 0;
@@ -63,7 +65,9 @@ process.stdin.on('data', (data) => {
             } else {
                 rythm += "u";
             }
-            rythm += ' '.repeat(nspace + char.length);
+            if (i !== v.syllables.length - 1) {
+                rythm += ' '.repeat(nspace + char.length);
+            }
 
             prevend = s.end;
             offset += char.length;
@@ -71,6 +75,8 @@ process.stdin.on('data', (data) => {
 
         console.log(line);
         console.log(rythm);
-        console.log("")
+        if (index !== ary.length - 1) {
+            console.log("")
+        }
     });
 });
