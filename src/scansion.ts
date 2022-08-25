@@ -14,7 +14,7 @@
  * along with verse.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isVowel, syllabify, Syllable, WordPosition, Flag } from './syllable';
+import { charIsVowel, isVowel, syllabify, Syllable, WordPosition, Flag } from './syllable';
 
 // MeterKind contains the description for a given verse or poem based on the
 // meter.
@@ -111,6 +111,27 @@ function bareSyllables(line: string): Array<Syllable> {
     return res;
 }
 
+// Returns true if the two given syllables represent a word boundary. That is,
+// the position on `prev` is stating that it's the end of the word, and the
+// position on `cur` is stating that it's at the start of a word. This function
+// assumes that the caller is passing these two syllables as consecutives.
+function inWordBoundaries(prev: Syllable, cur: Syllable): boolean {
+    return ((prev.position & WordPosition.End) === WordPosition.End) &&
+            ((cur.position & WordPosition.Start) === WordPosition.Start)
+}
+
+// Returns true if the given syllable starts in a way that suggests that ellision can occur.
+function isEllidable(syllable: Syllable): boolean {
+    const ch = syllable.value.charAt(0);
+
+    return charIsVowel(ch) || ch.toLowerCase() === 'h';
+}
+
+// Returns true if the given syllable starts with a "sneaky semivowel".
+function startsWithSneaky(syllable: Syllable): boolean {
+    return (syllable.flags & Flag.StartsWithSneakySemivowel) === Flag.StartsWithSneakySemivowel;
+}
+
 // Modify the understanding of the given syllables by taking into account that
 // this is a verse and rules like ellisions and such should apply.
 function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
@@ -121,42 +142,28 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
 
         // All the "magic" happens with the contact of of words. That is, we
         // only need to check for syllables in an end position followed by
-        // another with a start position.
-        if (((prev.position & WordPosition.End) === WordPosition.End) &&
-            ((cur.position & WordPosition.Start) === WordPosition.Start)) {
-            if (isVowel(prev.value, prev.value.length - 2) &&
-                ((cur.flags & Flag.StartsWithSneakySemivowel) !== Flag.StartsWithSneakySemivowel) &&
-                prev.value[prev.value.length - 1].toLowerCase() === 'm' &&
-                isVowel(cur.value, 0)) {
-                // Ellision of `<vowel> + m` ending in contact with a word
-                // starting with a vowel. The previous syllable is then
-                // considered as "dirty" (so it doesn't reflect on the final
-                // syllabification).
-                syllables[i].value = `${syllables[i - 1].value}_${syllables[i].value}`;
+        // another with a start position that can be ellided (that is, which
+        // starts with "h" or with a vowel which is not "sneaky").
+        if (inWordBoundaries(prev, cur) && !startsWithSneaky(cur) && isEllidable(cur)) {
+            const ult = prev.value.charAt(prev.value.length - 1);
+
+            // There are two main cases for resyllabification whenever the
+            // current syllable allows it:
+            //   1. Ellision: the previous syllable ends with a vowel or with a
+            //      vowel followed by 'm'. In this case, both syllables are to
+            //      be merged.
+            //   2. Splitting: the previous syllable ends with a consonant, and
+            //      thus it should naturally be moved into the next syllable.
+            if (charIsVowel(ult) || (isVowel(prev.value, prev.value.length - 2) && ult.toLowerCase() === 'm')) {
+                syllables[i].value = `${ult}_${syllables[i].value}`;
                 syllables[i].begin = syllables[i - 1].begin;
                 syllables[i - 1].position = WordPosition.Dirty;
-                syllables[i].position = WordPosition.Merged;
-            } else if (isVowel(cur.value, 0) &&
-                ((cur.flags & Flag.StartsWithSneakySemivowel) !== Flag.StartsWithSneakySemivowel) &&
-                !isVowel(prev.value, prev.value.length - 1)) {
-                // Split of part of a syllable that ends with a consonant in
-                // contact with a vowel.
-                const c = prev.value[prev.value.length - 1];
+                syllables[i].position |= WordPosition.Merged;
+            } else if (!charIsVowel(ult)) {
                 syllables[i - 1].value = syllables[i - 1].value.substring(0, syllables[i - 1].value.length - 1)
-                syllables[i].value = `${c}${syllables[i].value}`;
+                syllables[i].value = `${ult}${syllables[i].value}`;
                 syllables[i].begin = syllables[i - 1].end - 1;
                 syllables[i - 1].end -= 1;
-            } else if (isVowel(cur.value, 0) &&
-                ((cur.flags & Flag.StartsWithSneakySemivowel) !== Flag.StartsWithSneakySemivowel) &&
-                isVowel(prev.value, prev.value.length - 1)) {
-                // Ellision of word ending with a vowel in contact with a word
-                // starting with a vowel. The previous syllable is then
-                // considered as "dirty" (so it doesn't reflect on the final
-                // syllabification).
-                syllables[i].value = `${syllables[i - 1].value}_${syllables[i].value}`;
-                syllables[i].begin = syllables[i - 1].begin;
-                syllables[i - 1].position = WordPosition.Dirty;
-                syllables[i].position = WordPosition.Merged;
             }
         }
 
