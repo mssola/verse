@@ -73,7 +73,7 @@ process.stdin.on('data', (data) => {
             offset += char.length;
         }
 
-        console.log(line);
+        console.log(line.replace('-', '_'));
         console.log(rythm);
         if (index !== ary.length - 1) {
             console.log("")

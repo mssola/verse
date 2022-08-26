@@ -55,6 +55,12 @@ Notice some things from the above example:
 This library is still **under development**. Thus, bugs are to be expected, APIs
 might change, function might come and go, etc.
 
+### To document
+
+- Use of explicit semivowels.
+- Use of hyphens.
+- Use of tremmas.
+
 ## Contributing
 
 Take a look at the [CONTRIBUTING.md](./CONTRIBUTING.md) file.

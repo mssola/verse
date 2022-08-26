@@ -78,6 +78,8 @@ const words: Array<Table> = [
   { value: 'cuiquam', expected: ['cui', 'quam'] },
   { value: 'cuiusquam', expected: ['cu', 'ius', 'quam'] },
   { value: 'solvit', expected: ['sol', 'vit'] },
+  { value: 'pharet-ra', expected: ['pha', 'ret', 'ra'] },
+  { value: 'a-dhūc', expected: ['a', 'dhūc'] },
 
   // NOTE: this is actually ambiguous (another example being 'suādeō').
   // Sometimes authors have it in two syllables, other times in three. This is

@@ -373,7 +373,7 @@ function isDactylicHexameter(verses: Array<Verse>, rythms: Array<MeterKind>, unk
     }
 
     // If there are unknowns, then we have to double check if we can coerce them
-    // all into dactylic hexameter.
+    // all into dactylic hexameters.
     for (let i = 0; i < unknowns.length; i++) {
         if (!canCoerceInto(verses[unknowns[i]], MeterKind.DactylicHexameter)) {
             return false;

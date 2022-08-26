@@ -385,6 +385,7 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
                 // When a vowel was seen and now we have a consonant, the
                 // tendency would be to just call for another syllable, but we
                 // have to be extra careful for the following syllable-starting cases:
+                //
                 //   1. The next character is actually a pure vowel, so we can
                 //      be sure that this consonant belongs to the next syllable.
                 //   2. We can determine that this consonant belongs to a
@@ -392,7 +393,11 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
                 //   3. A "nj<vowel>" such as "nia" in "Laviniaque".
                 //   4. A cluster with a liquid consonant.
                 //   5. A "th-" cluster.
-                if (charIsVowel(next) || consonantNextSyllable(word, i) || specialNjCluster(word, i) || liquidConsonant(c, next) || isTh(c, next)) {
+                //
+                // Other than that, sometimes the user might have added an
+                // explicit '-' character. In this case we have to call for a
+                // new syllable as well since we were explicitely told to do so.
+                if (c === '-' || charIsVowel(next) || consonantNextSyllable(word, i) || specialNjCluster(word, i) || liquidConsonant(c, next) || isTh(c, next)) {
                     res.push({
                         value: syllable,
                         begin: begin + offset,
@@ -441,7 +446,14 @@ export function syllabify(word: string, offset = 0): Array<Syllable> {
             vowel = true;
         }
 
-        syllable += c;
+        // If the current character is actually a '-', then skip it and increase
+        // the `begin` variable. Otherwise, just add the character into the
+        // current syllable.
+        if (c === '-') {
+            begin++;
+        } else {
+            syllable += c;
+        }
     }
 
     // If there is some remaining characters in the `syllable` variable, then we
