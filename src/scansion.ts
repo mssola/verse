@@ -36,7 +36,8 @@ export interface Poem {
 export interface Verse {
     syllables: Array<VerseSyllable>,
     kind: MeterKind,
-    line: string
+    line: string,
+    stats: RythmStats
 }
 
 // Quantity of the verse syllable.
@@ -140,10 +141,10 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
     for (let i = 1; i < syllables.length; i++) {
         const cur = syllables[i];
 
-        // All the "magic" happens with the contact of of words. That is, we
-        // only need to check for syllables in an end position followed by
-        // another with a start position that can be ellided (that is, which
-        // starts with "h" or with a vowel which is not "sneaky").
+        // All the "magic" happens with the contact of words. That is, we only
+        // need to check for syllables in an end position followed by another
+        // with a start position that can be ellided (that is, which starts with
+        // "h" or with a vowel which is not "sneaky").
         if (inWordBoundaries(prev, cur) && !startsWithSneaky(cur) && isEllidable(cur)) {
             const ult = prev.value.charAt(prev.value.length - 1);
 
@@ -200,6 +201,8 @@ function longVowel(syllable: Syllable) {
                     break;
                 }
 
+                // 'u' is not to considered if it's part of a 'qu-' or 'gu-'
+                // cluster.
                 prev = str.charAt(i - 1).toLowerCase();
                 if ((prev == "q" || prev == "g") && isVowel(str, i + 1)) {
                     break
@@ -244,6 +247,47 @@ function meterEndsWith(pattern: Array<Quantity>, given: string): boolean {
     return true;
 }
 
+// Returns true if the given `pattern` follows an enclitic `n` dactylic pattern
+// (i.e. when 'n' -> 6, then we are looking for an enclitic 'hexameter'
+// dactylic), The `forbidContraction` parameter contains a 0-based index
+// pointing to the position where contraction with a spondee is forbidden. If
+// all positions can be contrated, then `-1` should be passed (default value).
+export function isEncliticDactyl(pattern: Array<Quantity>, n: number, forbidContraction = -1): boolean {
+    let i = 0;
+    let s = 0;
+
+    // This loop only checks for full dactyls and it will stop at the enclitic
+    // foot.
+    while (i < pattern.length && n !== 1) {
+        // Regardless of the foot, it always starts with long.
+        if (pattern[i] !== Quantity.long) {
+            return false;
+        }
+
+        // At this point, it's either followed by a single long syllable, or two
+        // short ones.
+        if (pattern[i + 1] === Quantity.long) {
+            // If this foot was actually forbidden to be contracted, return
+            // false now.
+            if (forbidContraction === s) {
+                return false;
+            }
+            i += 2;
+        } else if (pattern[i + 1] === Quantity.short && pattern[i + 2] === Quantity.short) {
+            i += 3;
+        } else {
+            return false;
+        }
+
+        n--;
+        s++;
+    }
+
+    // Check that there is only two syllables left, and that the first one is
+    // long (the second one is anceps).
+    return (i + 2 === pattern.length) && pattern[i] === Quantity.long;
+}
+
 // Given some rythmic statistics, return a string describing the verse at hand.
 function figureOutRythm(stats: RythmStats): MeterKind {
     // NOTE: the algorithm is still too strict/naive.
@@ -256,7 +300,7 @@ function figureOutRythm(stats: RythmStats): MeterKind {
         }
     }
     if (sum >= 13) {
-        if (meterEndsWith(stats.pattern, "-uu-x")) {
+        if (isEncliticDactyl(stats.pattern, 6)) {
             return MeterKind.DactylicHexameter;
         }
         return MeterKind.Unknown;
@@ -268,23 +312,27 @@ function figureOutRythm(stats: RythmStats): MeterKind {
 // Given an array of syllables, return a `Verse` object with the rythm already
 // annotated.
 function markRythm(syllables: Array<Syllable>): Verse {
-    const res: Verse = { syllables: [], kind: MeterKind.Unknown, line: "" };
-    const stats: RythmStats = { nshorts: 0, nlongs: 0, pattern: [] }
+    const res: Verse = {
+        syllables: [],
+        kind: MeterKind.Unknown,
+        line: "",
+        stats: { nshorts: 0, nlongs: 0, pattern: [] }
+    };
 
     for (const syllable of syllables) {
         let quantity: Quantity;
 
         if (!isVowel(syllable.value, syllable.value.length - 1)) {
             quantity = Quantity.long;
-            stats.nlongs += 1;
+            res.stats.nlongs += 1;
         } else if (longVowel(syllable)) {
             quantity = Quantity.long;
-            stats.nlongs += 1;
+            res.stats.nlongs += 1;
         } else {
             quantity = Quantity.short;
-            stats.nshorts += 1;
+            res.stats.nshorts += 1;
         }
-        stats.pattern.push(quantity);
+        res.stats.pattern.push(quantity);
 
         res.syllables.push({
             value: syllable.value,
@@ -293,25 +341,64 @@ function markRythm(syllables: Array<Syllable>): Verse {
             quantity: quantity
         });
     }
-    res.kind = figureOutRythm(stats);
+    res.kind = figureOutRythm(res.stats);
 
     return res;
 }
 
-// Returns true if the given poems seems to be an elegiac couplet. The arguments
-// are the same as for the `analyze` method.
-function isElegiacCouplet(verses: Array<Verse>, foundRythms: Array<MeterKind>): boolean {
-    if (verses.length % 2 !== 0) {
+// Returns true if the given verse can be coerced into the given meter. That is,
+// it returns true if the given verse can be considered whatever is passed in
+// `meter` if we take a broad/relaxed definition.
+//
+// NOTE: for now this implementation is empty, which means that the algorithm
+// should be robust and relaxed enough to not leave known meters as unknown.
+// Nonetheless, this is left here just in case there are some special cases to
+// be treated in the future.
+function canCoerceInto(verse: Verse, meter: MeterKind): boolean {
+    verse;
+    meter;
+
+    return false;
+}
+
+// Returns true if the given poems seems to be a poem in dactylic hexameters..
+// This method assumes that only known rythms are contained into the `rythms`
+// array, an unknown/undecided verses are indexed into the `unknowns` array.
+function isDactylicHexameter(verses: Array<Verse>, rythms: Array<MeterKind>, unknowns: Array<number>): boolean {
+    // Basic check: a poem in dactylic hexameters only contains this meter.
+    if (rythms.length !== 1 || rythms[0] !== MeterKind.DactylicHexameter) {
         return false;
     }
-    if (!foundRythms.includes(MeterKind.DactylicHexameter) ||
-        !foundRythms.includes(MeterKind.DactylicPentameter)) {
+
+    // If there are unknowns, then we have to double check if we can coerce them
+    // all into dactylic hexameter.
+    for (let i = 0; i < unknowns.length; i++) {
+        if (!canCoerceInto(verses[unknowns[i]], MeterKind.DactylicHexameter)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Returns true if the given poems seems to be an elegiac couplet. This method
+// assumes that only known rythms are contained into the `rythms` array, an
+// unknown/undecided verses are indexed into the `unknowns` array.
+function isElegiacCouplet(verses: Array<Verse>, rythms: Array<MeterKind>, unknowns: Array<number>): boolean {
+    if (verses.length % 2 !== 0 || rythms.length !== 2) {
+        return false;
+    }
+    if (!rythms.includes(MeterKind.DactylicHexameter) ||
+        !rythms.includes(MeterKind.DactylicPentameter)) {
         return false;
     }
 
     for (let i = 0; i < verses.length - 2; i += 2) {
         if (verses[i].kind !== MeterKind.DactylicHexameter ||
-            verses[i + 1].kind !== MeterKind.DactylicPentameter) {
+            (unknowns.includes(i) && !canCoerceInto(verses[i], MeterKind.DactylicHexameter))) {
+            return false;
+        }
+        if (verses[i + 1].kind !== MeterKind.DactylicPentameter ||
+            (unknowns.includes(i + 1) && !canCoerceInto(verses[i + 1], MeterKind.DactylicPentameter))) {
             return false;
         }
     }
@@ -321,15 +408,26 @@ function isElegiacCouplet(verses: Array<Verse>, foundRythms: Array<MeterKind>): 
 // Given an array of verses, it analyzes them so to return a proper `Poem`
 // object. This method also requires the`foundRythms` argument, which is an
 // array of the different verse kinds that have been found for this poem.
-function analyze(verses: Array<Verse>, foundRythms: Array<MeterKind>): Poem {
+function analyze(verses: Array<Verse>, foundRythms: Array<MeterKind>, unknowns: Array<number>): Poem {
     let kind = MeterKind.Unknown;
+    const kinds: Array<MeterKind> = [];
+    const knownRythms = foundRythms.filter((r) => r !== MeterKind.Unknown);
 
-    if (foundRythms.length === 1) {
-        kind = foundRythms[0];
-    } else if (foundRythms.length === 2) {
-        if (isElegiacCouplet(verses, foundRythms)) {
-            kind = MeterKind.ElegiacCouplet;
+    if (knownRythms.length === 1) {
+        if (isDactylicHexameter(verses, knownRythms, unknowns)) {
+            kinds.push(MeterKind.DactylicHexameter);
         }
+    } else if (knownRythms.length === 2) {
+        if (isElegiacCouplet(verses, knownRythms, unknowns)) {
+            kinds.push(MeterKind.ElegiacCouplet);
+        }
+    }
+
+    // For now we will only call for a known kind if there is only one
+    // candidate. In the future, if there are multiple candidates we might want
+    // to do some heuristics of some sorts. But for now let's play it safe.
+    if (kinds.length == 1) {
+        kind = kinds[0];
     }
 
     return { verses: verses, kind: kind };
@@ -359,9 +457,11 @@ export function scan(text: string): Poem {
     // '\n' or special sequences such as "//".
     const lines = text.split(/[\n//]+/)
     const res: Array<Verse> = [];
+    const unknowns: Array<number> = [];
     const foundRythms: Array<MeterKind> = [];
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         if (line.replace(/\s+/g, '') === '') {
             continue;
         }
@@ -373,10 +473,13 @@ export function scan(text: string): Poem {
         rythm.line = trimmedLine(line);
         res.push(rythm);
 
+        if (rythm.kind === MeterKind.Unknown) {
+            unknowns.push(i)
+        }
         if (!foundRythms.includes(rythm.kind)) {
             foundRythms.push(rythm.kind);
         }
     }
 
-    return analyze(res, foundRythms);
+    return analyze(res, foundRythms, unknowns);
 }
