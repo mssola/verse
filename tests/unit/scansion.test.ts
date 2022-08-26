@@ -60,3 +60,9 @@ test("enclitic dactylic hexameter is parsed correctly by isEncliticDactyl", () =
   pattern = [spondee, spondee].flat();
   expect(isEncliticDactyl(pattern, 2, 0)).toBeFalsy();
 });
+
+test("The 'x' from 'nox est' should be kept on 'nox'", () => {
+  const pattern = [Quantity.long, Quantity.long];
+
+  testSyllableQuantity("nox est", pattern);
+});

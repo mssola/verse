@@ -155,12 +155,14 @@ function resyllabify(syllables: Array<Syllable>): Array<Syllable> {
             //      be merged.
             //   2. Splitting: the previous syllable ends with a consonant, and
             //      thus it should naturally be moved into the next syllable.
+            //      The only exception to this is 'x' which is more like 'cs',
+            //      so it shouldn't move into the next syllable.
             if (charIsVowel(ult) || (isVowel(prev.value, prev.value.length - 2) && ult.toLowerCase() === 'm')) {
                 syllables[i].value = `${ult}_${syllables[i].value}`;
                 syllables[i].begin = syllables[i - 1].begin;
                 syllables[i - 1].position = WordPosition.Dirty;
                 syllables[i].position |= WordPosition.Merged;
-            } else if (!charIsVowel(ult)) {
+            } else if (!charIsVowel(ult) && ult.toLowerCase() !== 'x') {
                 syllables[i - 1].value = syllables[i - 1].value.substring(0, syllables[i - 1].value.length - 1)
                 syllables[i].value = `${ult}${syllables[i].value}`;
                 syllables[i].begin = syllables[i - 1].end - 1;
