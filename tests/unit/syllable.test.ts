@@ -1,4 +1,4 @@
-import { syllabify, WordPosition } from '../src/syllable';
+import { syllabify, WordPosition } from '../../src/syllable';
 
 // This file tests the `syllabify` function with a table. Hence the `Table` type
 // and the `words` array.

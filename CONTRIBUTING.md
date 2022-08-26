@@ -26,13 +26,22 @@ $ cat examples/aeneis-i.txt | yarn run bin
 This script is not just used for checking out examples, but it's also used for
 end-to-end testing. That is, we rely on
 [BATS](https://github.com/bats-core/bats-core), which for
-[tests/scan.bats](./tests/scan.bats) it simply calls this script and compares
-with expectations on [tests/testdata](./tests/testdata). In order to run these
-tests, just install [BATS](https://github.com/bats-core/bats-core) and run it
-like so:
+[tests/scan.bats](./tests/e2e/scan.bats) it simply calls this script and
+compares its output with expectations on [tests/testdata](./tests/testdata). In
+order to run these tests, just install
+[BATS](https://github.com/bats-core/bats-core) and run it like so:
 
 ```sh
 $ bats --verbose-run tests/scan.bats
+```
+
+We also provide a `Makefile` to make things simpler, and you can run:
+
+```sh
+$ make       # Run everything
+$ make lint  # Run linter
+$ make unit  # Run unit tests
+$ make e2e   # Run end to end tests
 ```
 
 ## Issue reporting

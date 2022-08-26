@@ -1,4 +1,4 @@
-import { Quantity } from '../src/scansion';
+import { Quantity } from '../../src/scansion';
 import { testSyllableQuantity } from './helpers';
 
 // Adonic pattern, used in some tests.

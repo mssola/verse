@@ -22,9 +22,7 @@ jobs:
         node-version: 14
 
     - name: Run
-      run: |
-        yarn
-        yarn eslint .
+      run: make lint
 
   test:
     name: Test
@@ -39,9 +37,7 @@ jobs:
         node-version: 14
 
     - name: Run
-      run: |
-        yarn
-        yarn test
+      run: make unit
 
   e2e:
     name: e2e
@@ -61,6 +57,4 @@ jobs:
         node-version: 14
 
     - name: Run
-      run: |
-        yarn
-        bats --verbose-run tests/scan.bats
+      run: make e2e

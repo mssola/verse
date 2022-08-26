@@ -1,4 +1,4 @@
-import { Quantity, scan } from '../src/scansion';
+import { Quantity, scan } from '../../src/scansion';
 
 // Returns a string representing the given quantity.
 function quantity(q: Quantity): string {
