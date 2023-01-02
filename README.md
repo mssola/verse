@@ -72,7 +72,7 @@ Read the [CHANGELOG.md](./CHANGELOG.md) file.
 ## License
 
 ```txt
-Copyright (C) 2022 Miquel Sabaté Solà <mikisabate@gmail.com>
+Copyright (C) 2022-2023 Miquel Sabaté Solà <mikisabate@gmail.com>
 
 verse is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
